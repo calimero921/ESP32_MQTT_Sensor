@@ -64,7 +64,7 @@ long lastRecu = 0;
 //Dé-commentez la ligne qui correspond à votre capteur
 #define DHTPIN 14             // Pin sur lequel est branché le DHT D5
 #define DHTTYPE DHT22         // DHT 22  (AM2302)
-DHT dht(DHTPIN, DHTTYPE);
+DHT_Unified dht(DHTPIN, DHTTYPE);
 
 //Création des objets
 WiFiClient espClient;
@@ -75,7 +75,6 @@ PubSubClient mqttClient;
 //*****************
 void setup() {
     Serial.begin(115200);   //Facultatif pour le debug
-    dht.begin();
 
     pinMode(sys_led, OUTPUT);
     digitalWrite(sys_led, HIGH);
@@ -90,8 +89,8 @@ void setup() {
 //    digitalWrite(cmd_led, 0);
 
     //saut de ligne pour l'affichage dans la console.
-    Serial.println();
-    Serial.println();
+    // Serial.println();
+    // Serial.println();
 
     //loading configuration
 //    if(!SPIFFS.begin()){
@@ -149,6 +148,27 @@ void setup() {
 //        ESP.reset();
 //        delay(5000);
 //    }
+
+  dht.begin();
+  sensor_t sensor;
+
+  dht.temperature().getSensor(&sensor);
+  Serial.println("------------------------------------");
+  Serial.println("Temperature");
+  Serial.print  ("Sensor:       "); Serial.println(sensor.name);
+  Serial.print  ("Driver Ver:   "); Serial.println(sensor.version);
+  Serial.print  ("Unique ID:    "); Serial.println(sensor.sensor_id);
+  Serial.print  ("Max Value:    "); Serial.print(sensor.max_value); Serial.println(" *C");
+  Serial.print  ("Min Value:    "); Serial.print(sensor.min_value); Serial.println(" *C");
+  Serial.print ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" *C");
+
+  dht.humidity().getSensor(&sensor);
+  Serial.print ("Sensor:       "); Serial.println(sensor.name);
+  Serial.print ("Driver Ver:   "); Serial.println(sensor.version);
+  Serial.print ("Unique ID:    "); Serial.println(sensor.sensor_id);
+  Serial.print ("Max Value:    "); Serial.print(sensor.max_value); Serial.println(" *C");
+  Serial.print ("Min Value:    "); Serial.print(sensor.min_value); Serial.println(" *C");
+  Serial.print ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" *C");
 
     //connexion Wifi
     WiFi.begin(ssid, password);
@@ -218,12 +238,10 @@ void loop() {
 //        }
 //        mqttClient.loop();
         long now = millis();
-        float t = dht.readTemperature();
-        float h = dht.readHumidity();
         Serial.print("Temperature : ");
-        Serial.print(t);
+        Serial.print(printTemperature());
         Serial.print(" | Humidite : ");
-        Serial.println(h);
+        Serial.println(printHumidity());
 //        mqttClient.publish(temperature_topic, String(t).c_str(), true);   //Publie la température sur le topic temperature_topic
 //        mqttClient.publish(humidity_topic, String(h).c_str(), true);      //Et l'humidité
 
@@ -353,10 +371,13 @@ String formatJSON(const JsonObject& obj) {
 }
 
 String printTemperature() {
-    // Lecture de l'humidité en %
-    float t = dht.readTemperature();
     String value = "";
     String unit = "°C";
+
+    // Lecture de l'humidité en %
+    sensors_event_t event;
+    dht.temperature().getEvent(&event);
+    float t = event.temperature;
 
     if (isnan(t)) {
         value = "---";
@@ -367,11 +388,13 @@ String printTemperature() {
 }
 
 String printHumidity() {
-    // Lecture de l'humidité en %
-    float h = dht.readHumidity();
     String value = "";
     String unit = "%";
 
+    // Lecture de l'humidité en %
+    sensors_event_t event;
+    dht.humidity().getEvent(&event);
+    float h = event.relative_humidity;
     if (isnan(h)) {
         value = "---";
     } else {
