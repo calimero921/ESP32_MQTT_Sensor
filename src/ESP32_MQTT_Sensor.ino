@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <WiFi.h>
-#include "FS.h"
-#include "SPIFFS.h"
+#include <SPIFFS.h>
+#include <FS.h>
 #include <math.h>
 #include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson.git
 
@@ -27,17 +27,21 @@
 // Include custom images
 #include "images.h"
 
+#define pin_sysled 13
+#define pin_cmdled 12
+
 //const char* configurationAPName = "AutoConnectAP";
 const char* ssid     = "orangelabs";
 const char* password = "softpessac";
 
 // Display Settings
-SH1106 display(0x3c, 5, 4);
+#define pin_I2CSDA 5
+#define pin_I2CSCL 4
+#define I2C_oled_adr 0x3c
+SH1106 display(I2C_oled_adr, pin_I2CSDA, pin_I2CSDA);
 OLEDDisplayUi ui (&display);
 StaticJsonBuffer<1000> jsonBuffer;
 
-const int sys_led = 13;
-//const int cmd_led = D5;
 unsigned long interval = 1000;             // refresh display interval
 unsigned long prevMillis = 0;
 
@@ -76,28 +80,28 @@ PubSubClient mqttClient;
 void setup() {
     Serial.begin(115200);   //Facultatif pour le debug
 
-    pinMode(sys_led, OUTPUT);
-    digitalWrite(sys_led, HIGH);
+    pinMode(pin_sysled, OUTPUT);
+    digitalWrite(pin_sysled, HIGH);
     delay(500);
-    digitalWrite(sys_led, LOW);
-    digitalWrite(sys_led, 0);
+    digitalWrite(pin_sysled, LOW);
+    digitalWrite(pin_sysled, 0);
 
-//    pinMode(cmd_led, OUTPUT);
-//    digitalWrite(cmd_led, HIGH);
-//    delay(500);
-//    digitalWrite(cmd_led, LOW);
-//    digitalWrite(cmd_led, 0);
+    pinMode(pin_cmdled, OUTPUT);
+    digitalWrite(pin_cmdled, HIGH);
+    delay(500);
+    digitalWrite(pin_cmdled, LOW);
+    digitalWrite(pin_cmdled, 0);
 
     //saut de ligne pour l'affichage dans la console.
-    // Serial.println();
-    // Serial.println();
+    Serial.println();
+    Serial.println();
 
     //loading configuration
-//    if(!SPIFFS.begin()){
-//        Serial.println("SPIFFS Mount Failed");
-//        return;
-//    }
-//    loadSettings();
+   // if(!SPIFFS.begin()){
+   //     Serial.println("SPIFFS Mount Failed");
+   //     return;
+   // }
+   // loadSettings();
 
     //initialize dispaly
     display.init();
@@ -153,22 +157,7 @@ void setup() {
   sensor_t sensor;
 
   dht.temperature().getSensor(&sensor);
-  Serial.println("------------------------------------");
-  Serial.println("Temperature");
-  Serial.print  ("Sensor:       "); Serial.println(sensor.name);
-  Serial.print  ("Driver Ver:   "); Serial.println(sensor.version);
-  Serial.print  ("Unique ID:    "); Serial.println(sensor.sensor_id);
-  Serial.print  ("Max Value:    "); Serial.print(sensor.max_value); Serial.println(" *C");
-  Serial.print  ("Min Value:    "); Serial.print(sensor.min_value); Serial.println(" *C");
-  Serial.print ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" *C");
-
   dht.humidity().getSensor(&sensor);
-  Serial.print ("Sensor:       "); Serial.println(sensor.name);
-  Serial.print ("Driver Ver:   "); Serial.println(sensor.version);
-  Serial.print ("Unique ID:    "); Serial.println(sensor.sensor_id);
-  Serial.print ("Max Value:    "); Serial.print(sensor.max_value); Serial.println(" *C");
-  Serial.print ("Min Value:    "); Serial.print(sensor.min_value); Serial.println(" *C");
-  Serial.print ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" *C");
 
     //connexion Wifi
     WiFi.begin(ssid, password);
@@ -196,27 +185,11 @@ void setup() {
 //        saveSettings();
 //    }
 
-//    mqttClient.setClient(espClient);
-//    mqttClient.setServer(mqtt_server, atoi(mqtt_port));    //Configuration de la connexion au serveur MQTT
-//    mqttClient.setCallback(mqttCallback);       //La fonction de callback qui est executée à chaque réception de message
+   // mqttClient.setClient(espClient);
+   // mqttClient.setServer(mqtt_server, atoi(mqtt_port));    //Configuration de la connexion au serveur MQTT
+   // mqttClient.setCallback(mqttCallback);       //La fonction de callback qui est executée à chaque réception de message
 
     displayManagement();
-}
-
-//Reconnexion
-void reconnect() {
-    //Boucle jusqu'à obtenur une reconnexion
-    while (!mqttClient.connected()) {
-        Serial.print("Connexion au serveur MQTT...");
-        if (mqttClient.connect("ESP8266Client", mqtt_user, mqtt_password)) {
-            Serial.println("OK");
-        } else {
-            Serial.print("KO, erreur : ");
-            Serial.print(mqttClient.state());
-            Serial.println(" On attend 5 secondes avant de recommencer");
-            delay(5000);
-        }
-    }
 }
 
 //*************
@@ -252,6 +225,22 @@ void loop() {
     }
 }
 
+//Reconnexion
+// void reconnect() {
+//     //Boucle jusqu'à obtenur une reconnexion
+//     while (!mqttClient.connected()) {
+//         Serial.print("Connexion au serveur MQTT...");
+//         if (mqttClient.connect("ESPClient", mqtt_user, mqtt_password)) {
+//             Serial.println("OK");
+//         } else {
+//             Serial.print("KO, erreur : ");
+//             Serial.print(mqttClient.state());
+//             Serial.println(" On attend 5 secondes avant de recommencer");
+//             delay(5000);
+//         }
+//     }
+// }
+
 //**********************
 //* display management *
 //**********************
@@ -286,7 +275,9 @@ void displayManagement() {
             }
             display.setFont(ArialMT_Plain_10);
             display.setTextAlignment(TEXT_ALIGN_CENTER);
-            display.drawString(96, 54, String(signalWiFi) + "dBm");
+            String signalWifiInfo = String(signalWiFi);
+            signalWifiInfo += "dBm";
+            display.drawString(96, 54, signalWifiInfo);
         }
     }
 
@@ -323,11 +314,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     String msgString = String(message_buff);
     Serial.println("Payload: " + msgString);
 
-//    if (msgString == "ON" ) {
-//        digitalWrite(cmd_led, HIGH);
-//    } else {
-//        digitalWrite(cmd_led, LOW);
-//    }
+   if (msgString == "ON" ) {
+       digitalWrite(pin_cmdled, HIGH);
+   } else {
+       digitalWrite(pin_cmdled, LOW);
+   }
 }
 
 //*********************************
@@ -371,7 +362,7 @@ String formatJSON(const JsonObject& obj) {
 }
 
 String printTemperature() {
-    String value = "";
+    String value = "---";
     String unit = "°C";
 
     // Lecture de l'humidité en %
@@ -379,28 +370,28 @@ String printTemperature() {
     dht.temperature().getEvent(&event);
     float t = event.temperature;
 
-    if (isnan(t)) {
-        value = "---";
-    } else {
+    if (!isnan(t)) {
         value = String(t).c_str();
+        value += " ";
+        value += unit;
     }
-    return value + " " + unit;
+    return value;
 }
 
 String printHumidity() {
-    String value = "";
+    String value = "---";
     String unit = "%";
 
     // Lecture de l'humidité en %
     sensors_event_t event;
     dht.humidity().getEvent(&event);
     float h = event.relative_humidity;
-    if (isnan(h)) {
-        value = "---";
-    } else {
+    if (!isnan(h)) {
         value = String(h).c_str();
+        value += " ";
+        value += unit;
     }
-    return value + " " + unit;
+    return value;
 }
 
 void saveSettings() {
@@ -430,10 +421,10 @@ void saveSettings() {
 void loadSettings() {
     Serial.println("loading configuration");
     //creation du fichier avec les valeurs par default si il n'existe pas
-//    if (!SPIFFS.exists("/settings.json")) {
+    if (!SPIFFS.exists("/settings.json")) {
         Serial.println("missing file -> creation");
         saveSettings();
-//    }
+    }
 
     //lecture des données du fichier
     File configFile = SPIFFS.open("/settings.json", "r");
