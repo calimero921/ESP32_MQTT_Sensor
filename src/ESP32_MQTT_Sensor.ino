@@ -22,29 +22,33 @@
  * SOFTWARE.
  *
  */
- 
+
 #include <Arduino.h>
 #include <Wire.h>
 #include <WiFi.h>
 #include <SPIFFS.h>
 #include <FS.h>
 #include <math.h>
-#include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson.git
+//https://github.com/bblanchon/ArduinoJson.git
+#include <ArduinoJson.h>
 
 //#include <WiFiClient.h>
 //#include <DNSServer.h>
 //#include <ESP8266WebServer.h>
 //#include <ESP8266mDNS.h>
-//#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager.git
+//https://github.com/tzapu/WiFiManager.git
+//#include <WiFiManager.h>
 
 //Bibliothèque des capteurs DHT
 #include <DHT_U.h>
 
 //Bibliothèque MQTT
+//https://github.com/knolleary/pubsubclient.git
 #include <PubSubClient.h>
 
 //SH1106 I2C
-#include <SH1106.h>               //https://github.com/squix78/esp8266-oled-ssd1306.git
+//https://github.com/squix78/esp8266-oled-ssd1306.git
+#include <SH1106.h>
 #include <OLEDDisplay.h>
 #include <OLEDDisplayFonts.h>
 #include <OLEDDisplayUi.h>
